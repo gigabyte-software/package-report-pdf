@@ -11,6 +11,7 @@ use Gigabyte\ReportPdf\Rendering\ImageStager;
 use Gigabyte\ReportPdf\Rendering\PdfMerger;
 use Gigabyte\ReportPdf\Rendering\TocExtractor;
 use Gigabyte\ReportPdf\Services\ReportFileGenerator;
+use Gigabyte\ReportPdf\Support\DocumentFooterBuilder;
 use Gigabyte\ReportPdf\Support\SignedDownloadHelper;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
@@ -32,6 +33,7 @@ class ReportPdfServiceProvider extends ServiceProvider
         $this->app->singleton(SectionedReportGenerator::class);
         $this->app->singleton(ReportFileGenerator::class);
         $this->app->singleton(SignedDownloadHelper::class);
+        $this->app->singleton(DocumentFooterBuilder::class);
     }
 
     public function boot(): void

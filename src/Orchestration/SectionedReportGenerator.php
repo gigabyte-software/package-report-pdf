@@ -49,10 +49,15 @@ class SectionedReportGenerator
 
         $frontMatterPages = $this->pageCounter->count($frontMatterPath);
 
-        $sectionMaps = [];
+        $sectionMaps = [
+            [
+                'map' => $this->tocExtractor->extract($frontMatterPath, $plan->tocMarkerRegex),
+                'pageOffset' => 0,
+            ],
+        ];
         $pageOffset = $frontMatterPages;
 
-        foreach ($sections as $index => $section) {
+        foreach ($sections as $section) {
             $path = $sectionPaths[$section->id] ?? null;
             if ($path === null || ! file_exists($path)) {
                 continue;
@@ -105,17 +110,44 @@ class SectionedReportGenerator
 
         $tasks = [];
         $pathsById = [];
+        $metaPaths = [];
 
         foreach ($sections as $section) {
             $outputPath = $plan->workDir.'/section-'.$section->id.'.pdf';
             $pathsById[$section->id] = $outputPath;
 
-            $tasks[] = fn () => $this->renderSection($section, $plan->bodyConfig, $outputPath);
+            $metaPath = $plan->workDir.'/section-'.$section->id.'.meta';
+            file_put_contents($metaPath, serialize([
+                'view' => $section->view,
+                'viewData' => $section->viewData,
+                'bodyConfig' => $plan->bodyConfig,
+                'outputPath' => $outputPath,
+            ]));
+            $metaPaths[] = $metaPath;
+
+            $tasks[] = fn () => $this->renderSectionFromMetaFile($metaPath);
         }
 
         Concurrency::driver('process')->run($tasks);
 
+        foreach ($metaPaths as $metaPath) {
+            @unlink($metaPath);
+        }
+
         return $pathsById;
+    }
+
+    protected function renderSectionFromMetaFile(string $metaPath): void
+    {
+        /** @var array{view: string, viewData: array<string, mixed>, bodyConfig: array<string, mixed>, outputPath: string} $payload */
+        $payload = unserialize(file_get_contents($metaPath), ['allowed_classes' => true]);
+
+        $this->bodyRenderer->render(
+            $payload['view'],
+            $payload['viewData'],
+            $payload['outputPath'],
+            $payload['bodyConfig'],
+        );
     }
 
     /**
