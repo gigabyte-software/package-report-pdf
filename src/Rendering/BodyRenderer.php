@@ -25,20 +25,23 @@ class BodyRenderer
 
         $pdf = Pdf::view($view, $data)->format($format);
 
-        if ($footerHtml !== null) {
-            $pdf->withBrowsershot(function ($browsershot) use ($footerHtml, $headerHtml, $margins, $windowSize) {
+        $applyWindowSize = $footerHtml !== null || isset($config['windowSize']);
+
+        $pdf->withBrowsershot(function ($browsershot) use ($footerHtml, $headerHtml, $margins, $windowSize, $applyWindowSize) {
+            BrowsershotTimeouts::apply($browsershot);
+
+            if ($applyWindowSize) {
+                $browsershot->windowSize($windowSize[0], $windowSize[1]);
+            }
+
+            if ($footerHtml !== null) {
                 $browsershot
-                    ->windowSize($windowSize[0], $windowSize[1])
                     ->showBrowserHeaderAndFooter()
                     ->headerHtml($headerHtml)
                     ->footerHtml($footerHtml)
                     ->margins($margins[0], $margins[1], $margins[2], $margins[3]);
-            });
-        } elseif (isset($config['windowSize'])) {
-            $pdf->withBrowsershot(function ($browsershot) use ($windowSize) {
-                $browsershot->windowSize($windowSize[0], $windowSize[1]);
-            });
-        }
+            }
+        });
 
         $pdf->save($outputPath);
     }
