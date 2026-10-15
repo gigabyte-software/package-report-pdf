@@ -10,14 +10,24 @@ use Gigabyte\ReportPdf\Models\ReportFile;
 
 trait HasReportFiles
 {
+    /**
+     * Survey PDFs for this parent. Named document streams are excluded.
+     */
     public function reportFiles(): MorphMany
     {
-        return $this->morphMany(ReportFile::class, 'reportable')->orderBy('version');
+        return $this->morphMany(ReportFile::class, 'reportable')
+            ->whereNull('document_key')
+            ->orderBy('version');
     }
 
+    /**
+     * Newest survey PDF for this parent. Named document streams are excluded.
+     */
     public function latestReportFile(): MorphOne
     {
-        return $this->morphOne(ReportFile::class, 'reportable')->orderByDesc('version');
+        return $this->morphOne(ReportFile::class, 'reportable')
+            ->whereNull('document_key')
+            ->orderByDesc('version');
     }
 
     public function getReportFileStatusColumn(): string
