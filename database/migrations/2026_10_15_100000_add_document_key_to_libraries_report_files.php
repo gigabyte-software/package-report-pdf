@@ -9,6 +9,11 @@ return new class extends Migration
 {
     private const STREAM_INDEX = 'libraries_report_files_stream_version_unique';
 
+    /**
+     * MariaDB cannot index an expression, so this stored column holds COALESCE(document_key, '').
+     */
+    private const STREAM_KEY = 'document_stream_key';
+
     private const LEGACY_INDEX = 'libraries_report_files_reportable_type_reportable_id_version_unique';
 
     /**
@@ -54,6 +59,12 @@ return new class extends Migration
             $this->dropStreamUniqueIndex();
         }
 
+        if (Schema::hasColumn('libraries_report_files', self::STREAM_KEY)) {
+            Schema::table('libraries_report_files', function (Blueprint $table) {
+                $table->dropColumn(self::STREAM_KEY);
+            });
+        }
+
         if (Schema::hasColumn('libraries_report_files', 'document_key')) {
             Schema::table('libraries_report_files', function (Blueprint $table) {
                 $table->dropColumn('document_key');
@@ -74,10 +85,42 @@ return new class extends Migration
      */
     private function createStreamUniqueIndex(): void
     {
+        if ($this->usesMariaDb()) {
+            $this->createMariaDbStreamUniqueIndex();
+
+            return;
+        }
+
         DB::statement(sprintf(
             "CREATE UNIQUE INDEX %s ON libraries_report_files (reportable_type, reportable_id, (COALESCE(document_key, '')), version)",
             self::STREAM_INDEX,
         ));
+    }
+
+    /**
+     * MariaDB rejects indexes on expressions, so the coalesced key is a stored column.
+     */
+    private function createMariaDbStreamUniqueIndex(): void
+    {
+        if (! Schema::hasColumn('libraries_report_files', self::STREAM_KEY)) {
+            Schema::table('libraries_report_files', function (Blueprint $table) {
+                $table->string(self::STREAM_KEY, 64)->storedAs("COALESCE(document_key, '')");
+            });
+        }
+
+        Schema::table('libraries_report_files', function (Blueprint $table) {
+            $table->unique(
+                ['reportable_type', 'reportable_id', self::STREAM_KEY, 'version'],
+                self::STREAM_INDEX,
+            );
+        });
+    }
+
+    private function usesMariaDb(): bool
+    {
+        $connection = Schema::getConnection();
+
+        return method_exists($connection, 'isMaria') && $connection->isMaria();
     }
 
     private function dropStreamUniqueIndex(): void

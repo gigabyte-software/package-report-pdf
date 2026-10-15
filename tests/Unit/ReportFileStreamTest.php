@@ -29,6 +29,8 @@ it('keeps one survey version sequence and a separate sequence per document key',
 
     reportStreamFile($survey, 'letter', 1);
     reportStreamFile($survey, null, 2);
+
+    expect(Schema::hasColumn('libraries_report_files', 'document_stream_key'))->toBeFalse();
 });
 
 it('drops a postgres-truncated legacy unique index', function () {

@@ -19,6 +19,15 @@ class ReportFile extends Model
 
     protected $keyType = 'string';
 
+    /**
+     * MariaDB stores the coalesced stream key in this generated column.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'document_stream_key',
+    ];
+
     protected $fillable = [
         'reportable_type',
         'reportable_id',
