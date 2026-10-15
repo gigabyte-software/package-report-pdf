@@ -22,6 +22,7 @@ class ReportFile extends Model
     protected $fillable = [
         'reportable_type',
         'reportable_id',
+        'document_key',
         'version',
         'file_path',
         'generated_at',

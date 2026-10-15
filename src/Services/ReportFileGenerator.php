@@ -9,6 +9,7 @@ use Gigabyte\ReportPdf\Models\ReportFile;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 
 class ReportFileGenerator
 {
@@ -96,6 +97,48 @@ class ReportFileGenerator
 
         $reportable->refresh();
         $dispatchJob();
+    }
+
+    /**
+     * Store one PDF on a named stream for this parent.
+     * `$relativePath` is the local-disk path, the same value written to `file_path`.
+     * A null document key stays the single survey PDF and still goes through {@see execute()}.
+     * This does not change the parent's generate status or latest-version column.
+     */
+    public function storeDocument(
+        Model $reportable,
+        string $relativePath,
+        string $documentKey,
+        int $version,
+        ?int $generatedBy = null,
+    ): ReportFile {
+        $documentKey = trim($documentKey);
+        $relativePath = ltrim(str_replace('\\', '/', trim($relativePath)), '/');
+
+        if ($documentKey === '') {
+            throw new InvalidArgumentException('A document key is required.');
+        }
+
+        if ($relativePath === '') {
+            throw new InvalidArgumentException('A document path is required.');
+        }
+
+        if ($version < 1) {
+            throw new InvalidArgumentException('A document version starts at 1.');
+        }
+
+        $file = new ReportFile;
+        $file->reportable_type = $reportable->getMorphClass();
+        $file->reportable_id = $reportable->getKey();
+        $file->document_key = $documentKey;
+        $file->version = $version;
+        $file->file_path = $relativePath;
+        $file->generated_at = now();
+        $file->created_by = $generatedBy;
+        $file->created_on = now();
+        $file->save();
+
+        return $file;
     }
 
     /**
