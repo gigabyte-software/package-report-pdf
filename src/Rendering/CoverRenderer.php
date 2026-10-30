@@ -16,6 +16,7 @@ class CoverRenderer
 
         Pdf::view($view, $data)
             ->withBrowsershot(function ($browsershot) use ($width, $height) {
+                BrowsershotTimeouts::apply($browsershot);
                 $browsershot->windowSize($width, $height);
             })
             ->format('a4')
